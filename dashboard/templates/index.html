@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Facial HCI Agent</title>
+<link rel="stylesheet" href="/static/css/style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- Consent modal -->
+<div id="consentModal" class="modal-bg">
+  <div class="modal">
+    <h2>🎥 Informed Consent Required</h2>
+    <p style="font-size:13px; color:var(--muted); line-height:1.5;">
+      This app analyzes your facial expressions using the research-grounded
+      Facial Action Coding System (FACS) to estimate likely emotional and
+      cognitive states. Before continuing, please read:
+    </p>
+    <ul>
+      <li>Your camera will turn on. Video frames are sent to the server only for analysis.</li>
+      <li>No raw video is stored. Only derived features and timestamps are logged.</li>
+      <li>Facial-expression inference is probabilistic, not truth. It has known bias across skin tones and cultures.</li>
+      <li>Do NOT use outputs for high-stakes decisions (hiring, medical, legal).</li>
+      <li>You can revoke consent at any time by closing this tab.</li>
+    </ul>
+    <div class="actions">
+      <button id="btnDecline">Decline</button>
+      <button id="btnAgree" class="primary">I Consent &amp; Continue</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <h1>🧠 Facial HCI Agent <span style="color:var(--muted); font-weight:400;">— v0.1</span></h1>
+  <div>
+    <span class="pill">LLM: {{ llm_provider if llm_enabled else "disabled" }}</span>
+    <span class="pill" id="statusLine">idle</span>
+  </div>
+</header>
+
+<main>
+  <!-- Left: webcam + controls -->
+  <section class="card">
+    <h2>Camera</h2>
+    <div id="videoWrap">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <div class="row">
+      <button id="btnStart" class="primary" disabled>Start</button>
+      <button id="btnStop" disabled>Stop</button>
+      <button id="btnReset" disabled title="Recalibrate personal baseline">Reset Baseline</button>
+    </div>
+    <div class="row">
+      <span style="font-size:11px; color:var(--muted);">Personalize (tag current moment):</span>
+      <button id="btnLabelNeutral">Neutral</button>
+      <button id="btnLabelHappy">Happy</button>
+      <button id="btnLabelFocused">Focused</button>
+      <button id="btnLabelConfused">Confused</button>
+    </div>
+    <div class="disclaimer">
+      ⚠ Facial analysis is probabilistic. A smile ≠ happy; see Barrett et al. 2019.
+      Never use for high-stakes decisions.
+    </div>
+  </section>
+
+  <!-- Middle: emotion timeline + AUs -->
+  <section class="card">
+    <h2>Current State</h2>
+    <div>
+      <span id="emotionPill" class="state-pill">—</span>
+      <span id="cogPill" class="state-pill">—</span>
+    </div>
+    <div class="metric-row">
+      <div class="metric"><div class="v" id="metricBlink">0</div><div class="l">blinks/min</div></div>
+      <div class="metric"><div class="v" id="metricYaw">0°</div><div class="l">head yaw</div></div>
+      <div class="metric"><div class="v" id="metricPitch">0°</div><div class="l">head pitch</div></div>
+      <div class="metric"><div class="v" id="metricGaze">—</div><div class="l">gaze x,y</div></div>
+    </div>
+
+    <h2 style="margin-top:16px;">Emotion Timeline</h2>
+    <div style="flex:0 0 auto;"><canvas id="chartEmotion"></canvas></div>
+
+    <h2 style="margin-top:16px;">Top Action Units</h2>
+    <div id="auBars"></div>
+  </section>
+
+  <!-- Right: inference feed -->
+  <section class="card">
+    <h2>Thought Inference (LLM)</h2>
+    <div id="thoughtFeed" style="max-height:280px;"></div>
+
+    <h2 style="margin-top:16px;">Micro-Expressions</h2>
+    <div id="microFeed" style="max-height:180px; overflow-y:auto;"></div>
+  </section>
+</main>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

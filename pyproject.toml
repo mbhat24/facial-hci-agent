@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "facial-hci-agent"
+version = "0.1.0"
+description = "Research-grounded facial HCI analysis agent with FACS + LLM reasoning"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [{name = "mbhat24"}]
+keywords = ["affective-computing","FACS","HCI","mediapipe","facial-analysis"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.setuptools.packages.find]
+where = ["src"]
