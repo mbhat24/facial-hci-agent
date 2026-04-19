@@ -10,6 +10,10 @@ const state = {
   maxHistory: 100,
   frameInterval: 100,  // ms
   lastFrame: 0,
+  adaptiveFrameInterval: 1000 / 10,  // Adaptive frame rate
+  networkLatency: 0,  // Track network latency
+  rttHistory: [],  // Round-trip time history
+  maxRttHistory: 10,
 };
 
 const $ = id => document.getElementById(id);
@@ -99,8 +103,23 @@ function connectWebSocket() {
   };
 
   state.ws.onmessage = (event) => {
-    console.log("WebSocket message received");
     const d = JSON.parse(event.data);
+    const receiveTime = Date.now();
+    
+    // Handle heartbeat ping
+    if (d.type === "ping") {
+      state.ws.send(JSON.stringify({type: "pong"}));
+      console.log("Pong sent");
+      return;
+    }
+    
+    // Calculate RTT and update adaptive frame rate
+    if (state.lastSendTime) {
+      const rtt = receiveTime - state.lastSendTime;
+      updateAdaptiveFrameRate(rtt);
+    }
+    
+    console.log("WebSocket message received");
     console.log("Analysis data:", d);
     renderAnalysis(d);
   };
@@ -121,7 +140,7 @@ function connectWebSocket() {
 function frameLoop(timestamp) {
   if (!state.running) return;
 
-  if (timestamp - state.lastFrame >= state.frameInterval) {
+  if (timestamp - state.lastFrame >= state.adaptiveFrameInterval) {
     state.lastFrame = timestamp;
 
     // Downsample to 320x240 for bandwidth
@@ -131,20 +150,53 @@ function frameLoop(timestamp) {
     const tempCtx = tempCanvas.getContext("2d");
     tempCtx.drawImage(state.video, 0, 0, 320, 240);
 
-    // Send as JPEG
+    // Send as JPEG with RTT tracking
     if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+      const sendTime = Date.now();
       const jpeg = tempCanvas.toDataURL("image/jpeg", 0.7);
       const b64 = jpeg.split(",")[1];
+      
       state.ws.send(JSON.stringify({
         frame: b64,
-        timestamp: Date.now(),
+        timestamp: sendTime,
       }));
+      
+      // Track send time for RTT calculation
+      state.lastSendTime = sendTime;
     } else {
       console.log("WebSocket not ready, state:", state.ws ? state.ws.readyState : "null");
     }
   }
 
   requestAnimationFrame(frameLoop);
+}
+
+// ─── Adaptive frame rate ─────────────────────────────────────────────
+function updateAdaptiveFrameRate(rtt) {
+  // Update RTT history
+  state.rttHistory.push(rtt);
+  if (state.rttHistory.length > state.maxRttHistory) {
+    state.rttHistory.shift();
+  }
+  
+  // Calculate average RTT
+  const avgRtt = state.rttHistory.reduce((a, b) => a + b, 0) / state.rttHistory.length;
+  
+  // Adjust frame interval based on RTT
+  // Target: keep RTT below 100ms
+  const targetRtt = 100;
+  const minFrameInterval = 1000 / 15;  // 15 FPS max
+  const maxFrameInterval = 1000 / 5;   // 5 FPS min
+  
+  if (avgRtt > targetRtt * 2) {
+    // High latency - reduce frame rate
+    state.adaptiveFrameInterval = Math.min(maxFrameInterval, state.adaptiveFrameInterval * 1.2);
+  } else if (avgRtt < targetRtt * 0.5) {
+    // Low latency - increase frame rate
+    state.adaptiveFrameInterval = Math.max(minFrameInterval, state.adaptiveFrameInterval * 0.9);
+  }
+  
+  console.log(`RTT: ${avgRtt.toFixed(0)}ms, Frame interval: ${state.adaptiveFrameInterval.toFixed(0)}ms`);
 }
 
 // ─── Rendering ─────────────────────────────────────────────────

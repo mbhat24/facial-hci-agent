@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     enable_llm_reasoning: bool = Field(default=True, alias="ENABLE_LLM_REASONING")
     llm_cooldown_seconds: float = Field(default=2.5, alias="LLM_COOLDOWN_SECONDS")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
+    enable_redis: bool = Field(default=False, alias="ENABLE_REDIS")
 
     project_root: Path = Path(__file__).resolve().parents[2]
     model_dir: Path = Path(__file__).resolve().parents[2] / "models"
