@@ -1,7 +1,8 @@
 """Central config, loaded from env."""
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, validator
 from pathlib import Path
+import logging
 
 
 class Settings(BaseSettings):
@@ -18,6 +19,26 @@ class Settings(BaseSettings):
     data_dir: Path = Path(__file__).resolve().parents[2] / "training_data"
     profiles_dir: Path = Path(__file__).resolve().parents[2] / "user_profiles"
 
+    @validator('llm_provider')
+    def validate_llm_provider(cls, v):
+        valid_providers = ['groq', 'ollama', 'none']
+        if v.lower() not in valid_providers:
+            raise ValueError(f'llm_provider must be one of {valid_providers}')
+        return v.lower()
+
+    @validator('log_level')
+    def validate_log_level(cls, v):
+        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        if v.upper() not in valid_levels:
+            raise ValueError(f'log_level must be one of {valid_levels}')
+        return v.upper()
+
+    @validator('llm_cooldown_seconds')
+    def validate_cooldown(cls, v):
+        if v < 0:
+            raise ValueError('llm_cooldown_seconds must be non-negative')
+        return v
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -28,3 +49,9 @@ settings = Settings()
 settings.model_dir.mkdir(exist_ok=True)
 settings.data_dir.mkdir(exist_ok=True)
 settings.profiles_dir.mkdir(exist_ok=True)
+
+# Configure logging based on settings
+logging.basicConfig(
+    level=getattr(logging, settings.log_level),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)

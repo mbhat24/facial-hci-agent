@@ -1,15 +1,17 @@
-# 🧠 Facial HCI Agent
+# 🧠 Facial HCI Agent v1.0
 
 **Research-grounded real-time facial analysis for Human-Computer Interaction.**
 
 Built on the **Facial Action Coding System (FACS)** — Ekman & Friesen (1978) — with
 LLM reasoning (Sălăgean et al. 2025), per-user personalization, and a live
-browser dashboard. Deploys to Render on the free tier.
+browser dashboard. Production-ready with comprehensive error handling, rate limiting,
+and session management.
 
 ---
 
 ## ✨ Features
 
+### Core Capabilities
 - 🎯 **20 FACS Action Units** extracted from MediaPipe blendshapes
 - 🎭 **7 emotions** (Ekman): happiness, sadness, fear, surprise, disgust, anger, contempt
 - 🧩 **7 cognitive states**: engaged, attentive, high_cognitive_load, stressed, confused, bored, distracted
@@ -19,7 +21,19 @@ browser dashboard. Deploys to Render on the free tier.
 - 👤 **Per-user personalization**: baseline adaptation + optional LogisticRegression classifier trained on your own tagged samples
 - 🌐 **Live web dashboard**: real-time emotion timeline, AU bars, thought-inference feed
 - 🔒 **Privacy-first**: explicit consent gate, no raw video stored, GDPR-aware logs
-- 🚀 **Deploys to Render** in one click via `render.yaml`
+- 🚀 **Deploys to Railway** on the free tier
+
+### Production Features (v1.0)
+- **Rate Limiting**: 15 FPS per session to prevent abuse
+- **Session Management**: Automatic cleanup of stale sessions (5 min timeout)
+- **Error Handling**: Comprehensive try-catch blocks with graceful degradation
+- **CORS Support**: Configured for cross-origin requests
+- **Health Checks**: Detailed health endpoint with system status
+- **Consent TTL**: Consent records expire after 24 hours
+- **Input Validation**: Pydantic validators for all inputs
+- **Logging**: Structured logging with configurable levels
+- **WebSocket Timeout**: 30-second timeout for inactive connections
+- **Graceful Shutdown**: Proper cleanup of resources on shutdown
 
 ---
 
@@ -87,27 +101,43 @@ pytest tests/ -v
 
 ---
 
-## ☁️ Deploy to Render (free, 5 min)
+## ☁️ Deploy to Railway (recommended - free, works with MediaPipe)
 
-**Option A — One-click via render.yaml**
+Railway's free tier includes the OpenGL libraries required for MediaPipe.
+
+**Steps:**
 1. Push this repo to GitHub.
-2. Go to https://render.com/ → New → Blueprint.
-3. Connect your GitHub and pick this repo. Render detects `render.yaml`.
-4. In the Render dashboard, click into the service → Environment → set `GROQ_API_KEY` (from https://console.groq.com/keys).
-5. Deploy. Your dashboard is live at `https://<your-app>.onrender.com`.
+2. Go to https://railway.app/ → New Project → Deploy from GitHub repo.
+3. Connect your GitHub and select `facial-hci-agent`.
+4. Click "Deploy now".
+5. After deployment, go to the project → Variables tab.
+6. Add environment variable: `GROQ_API_KEY` (from https://console.groq.com/keys).
+7. Click "Save" and Railway will redeploy.
+8. Your dashboard is live at `https://<your-app>.up.railway.app`
 
-**Option B — Manual**
-- Service type: Web Service · Runtime: Python 3.11 · Plan: Free
-- Build: `pip install -r requirements.txt`
-- Start: `uvicorn dashboard.server:app --host 0.0.0.0 --port $PORT`
-- Health check: `/health`
-- Env var: `GROQ_API_KEY`
-
-**Notes for Render free tier**
-- First request after idle (15 min) will cold-start (20 s).
+**Notes for Railway free tier**
+- First request after idle (cold-start) takes ~20-30 seconds.
 - WebSockets are fully supported.
-- Keep frame rate ≤ 10 FPS to stay within CPU budget.
-- The MediaPipe model (~3 MB) is downloaded at build time.
+- Frame rate is rate-limited to 15 FPS per session.
+- The MediaPipe model is downloaded during build.
+
+---
+
+## ☁️ Alternative: Render (Docker deployment)
+
+Render's free tier requires Docker deployment to include OpenGL libraries.
+
+**Steps:**
+1. Delete any existing Render service for this repo.
+2. Go to https://render.com/ → New → Blueprint.
+3. Connect GitHub and select `facial-hci-agent`.
+4. Render will read `render.yaml` (configured for Docker).
+5. Set `GROQ_API_KEY` environment variable in the dashboard.
+6. Deploy. Your dashboard is live at `https://<your-app>.onrender.com`
+
+**Notes for Render**
+- Uses Docker deployment with OpenGL libraries pre-installed.
+- Same cold-start behavior as Railway.
 
 ---
 

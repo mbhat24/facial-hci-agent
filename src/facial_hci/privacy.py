@@ -1,8 +1,13 @@
 """Consent gating and data-minimization helpers."""
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 import time
 import uuid
+import logging
+
+log = logging.getLogger(__name__)
+
+CONSENT_TTL = 86400  # 24 hours
 
 
 @dataclass
@@ -11,26 +16,57 @@ class ConsentRecord:
     consented_at: float
     user_agent: str = ""
     note: str = ""
+    revoked_at: Optional[float] = None
 
 
 class ConsentRegistry:
-    """In-memory consent registry. For production, move to a DB."""
+    """In-memory consent registry with TTL. For production, use a database."""
 
-    def __init__(self):
+    def __init__(self, ttl: int = CONSENT_TTL):
         self._records: Dict[str, ConsentRecord] = {}
+        self._ttl = ttl
 
     def grant(self, user_agent: str = "", note: str = "") -> ConsentRecord:
         sid = uuid.uuid4().hex
-        rec = ConsentRecord(session_id=sid, consented_at=time.time(),
-                            user_agent=user_agent, note=note)
+        rec = ConsentRecord(
+            session_id=sid,
+            consented_at=time.time(),
+            user_agent=user_agent[:500],  # Truncate for safety
+            note=note[:200]
+        )
         self._records[sid] = rec
+        log.info(f"Consent granted for session {sid}")
         return rec
 
     def is_valid(self, sid: str) -> bool:
-        return sid in self._records
+        if sid not in self._records:
+            return False
+        rec = self._records[sid]
+        if rec.revoked_at is not None:
+            return False
+        if time.time() - rec.consented_at > self._ttl:
+            self._records.pop(sid, None)
+            return False
+        return True
 
     def revoke(self, sid: str):
-        self._records.pop(sid, None)
+        if sid in self._records:
+            self._records[sid].revoked_at = time.time()
+            log.info(f"Consent revoked for session {sid}")
+
+    def cleanup_expired(self) -> int:
+        """Remove expired consent records. Returns count removed."""
+        now = time.time()
+        expired = [
+            sid for sid, rec in self._records.items()
+            if (rec.revoked_at is not None and now - rec.revoked_at > self._ttl) or
+               (rec.revoked_at is None and now - rec.consented_at > self._ttl)
+        ]
+        for sid in expired:
+            del self._records[sid]
+        if expired:
+            log.info(f"Cleaned up {len(expired)} expired consent records")
+        return len(expired)
 
 
 CONSENT = ConsentRegistry()
