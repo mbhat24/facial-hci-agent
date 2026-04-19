@@ -26,9 +26,12 @@ async function initConsent() {
 }
 
 $("btnAgree").onclick = async () => {
+  console.log("Agree clicked, initializing consent...");
   await initConsent();
+  console.log("Consent initialized, session_id:", state.sessionId);
   $("consentModal").style.display = "none";
   $("btnStart").disabled = false;
+  console.log("Modal hidden, Start button enabled");
 };
 
 $("btnDecline").onclick = () => {
@@ -38,13 +41,16 @@ $("btnDecline").onclick = () => {
 // ─── Camera ─────────────────────────────────────────────────────────
 async function startCamera() {
   try {
+    console.log("Starting camera...");
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { width: 640, height: 480, facingMode: "user" },
       audio: false,
     });
+    console.log("Camera stream obtained");
     state.video = $("video");
     state.video.srcObject = stream;
     await state.video.play();
+    console.log("Video playing");
 
     state.canvas = $("overlay");
     state.ctx = state.canvas.getContext("2d");
@@ -55,9 +61,12 @@ async function startCamera() {
     $("btnStop").disabled = false;
     $("btnReset").disabled = false;
     state.running = true;
+    console.log("Connecting WebSocket...");
     connectWebSocket();
+    console.log("Starting frame loop...");
     requestAnimationFrame(frameLoop);
   } catch (err) {
+    console.error("Camera error:", err);
     alert("Camera error: " + err.message);
   }
 }
@@ -90,7 +99,9 @@ function connectWebSocket() {
   };
 
   state.ws.onmessage = (event) => {
+    console.log("WebSocket message received");
     const d = JSON.parse(event.data);
+    console.log("Analysis data:", d);
     renderAnalysis(d);
   };
 
@@ -128,6 +139,8 @@ function frameLoop(timestamp) {
         frame: b64,
         timestamp: Date.now(),
       }));
+    } else {
+      console.log("WebSocket not ready, state:", state.ws ? state.ws.readyState : "null");
     }
   }
 
