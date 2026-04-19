@@ -1,19 +1,14 @@
 services:
   - type: web
     name: facial-hci-agent
-    env: python
+    env: docker
     plan: free
     region: oregon
-    buildCommand: |
-      pip install --upgrade pip
-      pip install -r requirements.txt
-      python -c "from src.facial_hci.perception.face_mesh import ensure_model; ensure_model()"
-    startCommand: uvicorn dashboard.server:app --host 0.0.0.0 --port $PORT --ws-ping-interval 20
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11"
       - key: LLM_PROVIDER
         value: groq
       - key: LLM_MODEL
