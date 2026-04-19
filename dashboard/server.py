@@ -99,9 +99,10 @@ async def revoke_consent(req: ConsentRequest):
 
 # ─── WebSocket ───────────────────────────────────────────────────────
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, session_id: str = None):
     await websocket.accept()
-    session_id = str(uuid.uuid4())
+    if not session_id:
+        session_id = str(uuid.uuid4())
     agent = SESSIONS.get_or_create(session_id)
     frame_count = 0
     start_t = time.time()

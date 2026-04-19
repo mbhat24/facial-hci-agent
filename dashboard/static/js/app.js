@@ -82,10 +82,11 @@ $("btnStop").onclick = stopCamera;
 // ─── WebSocket ──────────────────────────────────────────────────────
 function connectWebSocket() {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  state.ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+  const wsUrl = `${proto}//${window.location.host}/ws?session_id=${state.sessionId}`;
+  state.ws = new WebSocket(wsUrl);
 
   state.ws.onopen = () => {
-    console.log("WebSocket connected");
+    console.log("WebSocket connected with session:", state.sessionId);
   };
 
   state.ws.onmessage = (event) => {
