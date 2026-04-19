@@ -5,7 +5,7 @@ websockets==13.0.1
 mediapipe==0.10.33
 opencv-python-headless==4.10.0.84
 numpy==1.26.4
-scipy==1.13.1
+scipy==1.13.0
 pillow==10.4.0
 pydantic==2.8.2
 pydantic-settings==2.5.2
