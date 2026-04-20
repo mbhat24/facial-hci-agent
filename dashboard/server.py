@@ -68,12 +68,6 @@ async def lifespan(app: FastAPI):
     # Pre-warm MediaPipe model download
     ensure_model()
     log.info("MediaPipe model ready.")
-    
-    # Initialize Prometheus instrumentator
-    instrumentator = Instrumentator()
-    instrumentator.instrument(app).expose(app, endpoint="/metrics")
-    log.info("Prometheus metrics enabled at /metrics")
-    
     yield
     log.info("Shutting down...")
 
@@ -118,6 +112,11 @@ app = FastAPI(
         }
     ]
 )
+
+# Initialize Prometheus instrumentator (must be after app creation)
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app, endpoint="/metrics")
+log.info("Prometheus metrics enabled at /metrics")
 
 # CORS middleware
 app.add_middleware(
