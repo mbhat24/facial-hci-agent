@@ -123,21 +123,21 @@ Railway's free tier includes the OpenGL libraries required for MediaPipe.
 
 ---
 
-## ☁️ Alternative: Render (Docker deployment)
+## ☁️ Alternative: Render (Native Python deployment)
 
-Render's free tier requires Docker deployment to include OpenGL libraries.
+Render's free tier now supports native Python deployment with MediaPipe CPU-only mode.
 
 **Steps:**
 1. Delete any existing Render service for this repo.
 2. Go to https://render.com/ → New → Blueprint.
 3. Connect GitHub and select `facial-hci-agent`.
-4. Render will read `render.yaml` (configured for Docker).
+4. Render will read `render.yaml` (configured for native Python).
 5. Set `GROQ_API_KEY` environment variable in the dashboard.
 6. Deploy. Your dashboard is live at `https://<your-app>.onrender.com`
 
 **Notes for Render**
-- Uses Docker deployment with OpenGL libraries pre-installed.
-- Same cold-start behavior as Railway.
+- Uses native Python deployment (MediaPipe CPU-only mode, no OpenGL required).
+- Faster deployment (2-3 minutes) compared to Docker.
 
 ---
 
