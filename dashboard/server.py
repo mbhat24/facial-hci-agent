@@ -81,8 +81,42 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     lifespan=lifespan,
     title="Facial HCI Agent",
-    description="Research-grounded real-time facial analysis for Human-Computer Interaction",
-    version="1.0.0"
+    description="""Research-grounded real-time facial analysis for Human-Computer Interaction.
+
+## Features
+- 20 FACS Action Units extracted from MediaPipe blendshapes
+- 7 emotions (Ekman): happiness, sadness, fear, surprise, disgust, anger, contempt
+- 7 cognitive states: engaged, attentive, high_cognitive_load, stressed, confused, bored, distracted
+- Iris-based gaze estimation, head pose, blink rate
+- Micro-expression detection (temporal AU-spike model, < 500 ms events)
+- LLM reasoning layer (Groq Llama-3.3-70B free tier, or local Ollama)
+
+## Privacy
+- Explicit consent gate
+- No raw video stored
+- GDPR-compliant data export/delete endpoints
+""",
+    version="1.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "health",
+            "description": "Health check and monitoring endpoints"
+        },
+        {
+            "name": "consent",
+            "description": "User consent management"
+        },
+        {
+            "name": "data",
+            "description": "GDPR data export and deletion"
+        },
+        {
+            "name": "websocket",
+            "description": "Real-time WebSocket video analysis"
+        }
+    ]
 )
 
 # CORS middleware
@@ -192,9 +226,14 @@ async def index(request: Request):
     })
 
 
-@app.get("/health")
+@app.get("/health", tags=["health"])
 async def health():
-    """Health check endpoint with system status."""
+    """
+    Health check endpoint with system status.
+    
+    Returns:
+        JSON with service status, active sessions, and configuration
+    """
     try:
         # Clean up stale sessions
         stale_count = SESSIONS.cleanup_stale_sessions()
@@ -206,7 +245,8 @@ async def health():
             "stale_sessions_cleaned": stale_count,
             "llm_enabled": settings.enable_llm_reasoning,
             "llm_provider": settings.llm_provider,
-            "version": "1.0.0"
+            "version": "1.1.0",
+            "redis_enabled": redis_client is not None
         }
     except Exception as e:
         log.error(f"Health check error: {e}")
@@ -224,8 +264,17 @@ class ConsentRequest(BaseModel):
         return v[:500]  # Truncate to prevent abuse
 
 
-@app.post("/api/consent")
+@app.post("/api/consent", tags=["consent"])
 async def grant_consent(req: ConsentRequest):
+    """
+    Grant consent for facial analysis.
+    
+    Args:
+        req: Consent request with user agent
+        
+    Returns:
+        Session ID and consent timestamp
+    """
     try:
         rec = CONSENT.grant(user_agent=req.user_agent)
         log.info(f"Consent granted for session: {rec.session_id}")
@@ -235,8 +284,17 @@ async def grant_consent(req: ConsentRequest):
         raise HTTPException(status_code=500, detail="Failed to grant consent")
 
 
-@app.post("/api/consent/revoke")
+@app.post("/api/consent/revoke", tags=["consent"])
 async def revoke_consent(req: ConsentRequest):
+    """
+    Revoke consent for facial analysis.
+    
+    Args:
+        req: Consent request
+        
+    Returns:
+        Revocation confirmation
+    """
     try:
         CONSENT.revoke("")  # In production, pass session_id
         log.info("Consent revoked")
@@ -254,9 +312,17 @@ class DataDeleteRequest(BaseModel):
     session_id: str
 
 
-@app.post("/api/data/export")
+@app.post("/api/data/export", tags=["data"])
 async def export_data(req: DataExportRequest):
-    """Export all data for a session (GDPR compliance)."""
+    """
+    Export all data for a session (GDPR right to data portability).
+    
+    Args:
+        req: Data export request with session ID
+        
+    Returns:
+        Session data including consent, profile, and activity metrics
+    """
     try:
         # Check if session exists
         if req.session_id not in SESSIONS._sessions:
@@ -295,9 +361,17 @@ async def export_data(req: DataExportRequest):
         raise HTTPException(status_code=500, detail="Failed to export data")
 
 
-@app.post("/api/data/delete")
+@app.post("/api/data/delete", tags=["data"])
 async def delete_data(req: DataDeleteRequest):
-    """Delete all data for a session (GDPR right to be forgotten)."""
+    """
+    Delete all data for a session (GDPR right to be forgotten).
+    
+    Args:
+        req: Data deletion request with session ID
+        
+    Returns:
+        Deletion confirmation
+    """
     try:
         # Remove session
         SESSIONS.remove(req.session_id)

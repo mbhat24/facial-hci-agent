@@ -12,7 +12,7 @@ import numpy as np
 from .perception.face_mesh import FacePerception
 from .perception.head_pose import head_pose_from_matrix
 from .perception.iris_gaze import estimate_gaze
-from .features.action_units import extract_action_units, AU_THRESHOLD
+from src.facial_hci.features.action_units import extract_action_units, active_aus, TemporalSmoother, AU_THRESHOLD
 from .features.blink_analysis import BlinkTracker
 from .features.micro_expressions import MicroExpressionDetector, MicroEvent
 from .features.audio_prosody import ProsodyFeatures
@@ -65,6 +65,9 @@ class FacialHCIAgent:
         self.history: Deque[str] = deque(maxlen=20)
         self.micro_history: Deque[str] = deque(maxlen=20)
         self.personalization = personalization   # optional PersonalProfile
+        
+        # Temporal smoothing for AU values to reduce jitter
+        self.au_smoother = TemporalSmoother(alpha=0.3, window_size=5)
 
         self._t0 = time.time()
         self.log_dir = log
@@ -92,7 +95,8 @@ class FacialHCIAgent:
             blendshapes = mp_result.face_blendshapes[0] if mp_result.face_blendshapes else []
 
             # 2. Features
-            result.action_units = extract_action_units(blendshapes)
+            raw_aus = extract_action_units(blendshapes)
+            result.action_units = self.au_smoother.update(raw_aus)
             if mp_result.facial_transformation_matrixes:
                 result.head_pose = head_pose_from_matrix(
                     mp_result.facial_transformation_matrixes[0])
@@ -163,4 +167,5 @@ class FacialHCIAgent:
 
     def close(self):
         self.perception.close()
+        self.au_smoother.reset()
         log.info("Agent closed.")

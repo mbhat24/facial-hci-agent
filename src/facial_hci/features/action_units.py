@@ -2,7 +2,8 @@
 
 Based on Sălăgean, Leba, Ionica (2025) — mapping + weak-signal amplification.
 """
-from typing import Dict, List
+from typing import Dict, List, Deque
+from collections import deque
 import numpy as np
 
 BLENDSHAPE_TO_AU: Dict[str, List[str]] = {
@@ -36,6 +37,57 @@ AU_AMPLIFICATION = {
 }
 
 AU_THRESHOLD = 0.15
+
+
+class TemporalSmoother:
+    """Exponential moving average smoother to reduce AU jitter."""
+    
+    def __init__(self, alpha: float = 0.3, window_size: int = 5):
+        """
+        Args:
+            alpha: Smoothing factor (0-1), lower = more smoothing
+            window_size: Number of frames to keep in history for moving average
+        """
+        self.alpha = alpha
+        self.window_size = window_size
+        self.history: Deque[Dict[str, float]] = deque(maxlen=window_size)
+        self.current_smoothed: Dict[str, float] = {}
+    
+    def update(self, new_aus: Dict[str, float]) -> Dict[str, float]:
+        """
+        Update with new AU values and return smoothed values.
+        
+        Args:
+            new_aus: New AU values from current frame
+            
+        Returns:
+            Smoothed AU values
+        """
+        self.history.append(new_aus.copy())
+        
+        if not self.current_smoothed:
+            # First frame - initialize with current values
+            self.current_smoothed = new_aus.copy()
+            return self.current_smoothed
+        
+        # Exponential moving average: smoothed = alpha * new + (1-alpha) * old
+        for au, value in new_aus.items():
+            if au in self.current_smoothed:
+                self.current_smoothed[au] = self.alpha * value + (1 - self.alpha) * self.current_smoothed[au]
+            else:
+                self.current_smoothed[au] = value
+        
+        # Ensure all AUs are present
+        for au in self.current_smoothed.keys():
+            if au not in new_aus:
+                self.current_smoothed[au] = self.current_smoothed[au] * (1 - self.alpha)
+        
+        return self.current_smoothed
+    
+    def reset(self):
+        """Reset smoothing history."""
+        self.history.clear()
+        self.current_smoothed.clear()
 
 
 def extract_action_units(blendshapes) -> Dict[str, float]:
