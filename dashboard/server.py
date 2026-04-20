@@ -409,8 +409,14 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str = None):
     last_frame_time = 0
     last_heartbeat = time.time()
 
-    log.info(f"WebSocket connected: session={session_id}")
+    log.info(f"WebSocket connected: session={session_id}, agent={agent}")
     websocket_connections_total.labels(status='connected').inc()
+    
+    # Send initial acknowledgment
+    try:
+        await websocket.send_json({"type": "connected", "session_id": session_id})
+    except Exception as e:
+        log.error(f"Failed to send connection acknowledgment: {e}")
 
     async def heartbeat_loop():
         """Send periodic pings to detect dead connections."""
@@ -460,7 +466,9 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str = None):
                 jpeg_bytes = base64.b64decode(b64)
                 frame = cv2.imdecode(np.frombuffer(jpeg_bytes, np.uint8), cv2.IMREAD_COLOR)
                 if frame is None:
+                    log.warning(f"Failed to decode frame for session {session_id}")
                     continue
+                log.debug(f"Frame decoded successfully for session {session_id}, shape: {frame.shape}")
             except Exception as e:
                 log.error(f"Frame decode error for session {session_id}: {e}")
                 continue
@@ -473,6 +481,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str = None):
                 SESSIONS._frame_count[session_id] = frame_count
                 SESSIONS._last_activity[session_id] = time.time()
                 frames_processed_total.labels(session_id=session_id).inc()
+                log.debug(f"Analysis complete for session {session_id}, face_detected={result.face_detected}")
             except Exception as e:
                 log.error(f"Analysis error for session {session_id}: {e}")
                 result = None
