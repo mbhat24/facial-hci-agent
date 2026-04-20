@@ -150,11 +150,11 @@ function frameLoop(timestamp) {
     const tempCtx = tempCanvas.getContext("2d");
     tempCtx.drawImage(state.video, 0, 0, 320, 240);
 
-    // Send as WebP with RTT tracking (better compression than JPEG)
+    // Send as JPEG with RTT tracking (WebP compatibility issues on some platforms)
     if (state.ws && state.ws.readyState === WebSocket.OPEN) {
       const sendTime = Date.now();
-      const webp = tempCanvas.toDataURL("image/webp", 0.7);
-      const b64 = webp.split(",")[1];
+      const jpeg = tempCanvas.toDataURL("image/jpeg", 0.7);
+      const b64 = jpeg.split(",")[1];
       
       state.ws.send(JSON.stringify({
         frame: b64,

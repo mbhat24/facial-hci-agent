@@ -455,10 +455,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str = None):
             if not b64:
                 continue
 
-            # Decode WebP (better compression than JPEG)
+            # Decode JPEG (WebP compatibility issues on some platforms)
             try:
-                webp_bytes = base64.b64decode(b64)
-                frame = cv2.imdecode(np.frombuffer(webp_bytes, np.uint8), cv2.IMREAD_COLOR)
+                jpeg_bytes = base64.b64decode(b64)
+                frame = cv2.imdecode(np.frombuffer(jpeg_bytes, np.uint8), cv2.IMREAD_COLOR)
                 if frame is None:
                     continue
             except Exception as e:
