@@ -16,7 +16,7 @@ from src.facial_hci.features.action_units import extract_action_units, active_au
 from .features.blink_analysis import BlinkTracker
 from .features.micro_expressions import MicroExpressionDetector, MicroEvent
 from .features.audio_prosody import ProsodyFeatures
-from .inference.emotion_rules import classify_emotion, emotion_probabilities
+from .inference.emotion_rules import classify_emotion, emotion_probabilities, emotion_confidence_interval
 from .inference.cognitive_state import classify_cognitive_state
 from .inference.multimodal_fusion import fuse
 from .inference.llm_reasoner import LLMReasoner
@@ -38,6 +38,7 @@ class AnalysisResult:
     emotion: str = "neutral"
     emotion_confidence: float = 0.0
     emotion_probs: Dict[str, float] = field(default_factory=dict)
+    emotion_confidence_intervals: Dict[str, tuple] = field(default_factory=dict)
     cognitive_state: str = "neutral"
     cognitive_confidence: float = 0.0
     micro_events: List[str] = field(default_factory=list)
@@ -119,6 +120,7 @@ class FacialHCIAgent:
             # 4. Inference
             result.emotion, result.emotion_confidence = classify_emotion(result.action_units)
             result.emotion_probs = emotion_probabilities(result.action_units)
+            result.emotion_confidence_intervals = emotion_confidence_interval(result.action_units)
 
             result.cognitive_state, result.cognitive_confidence = classify_cognitive_state(
                 result.action_units,

@@ -37,15 +37,42 @@ def classify_emotion(aus: Dict[str, float],
 
 
 def emotion_probabilities(aus: Dict[str, float]) -> Dict[str, float]:
-    """Softer distribution — useful for charts."""
-    active = active_aus(aus)
-    probs = {"neutral": 0.2}
-    for label, rule in EMOTION_RULES.items():
-        must = set(rule["must"])
-        should = set(rule["should"])
-        m_hit = sum(aus.get(a, 0) for a in must if a in active)
-        s_hit = sum(aus.get(a, 0) for a in should if a in active)
-        probs[label] = float(m_hit + 0.4 * s_hit)
-    # normalize
-    total = sum(probs.values()) + 1e-6
-    return {k: v / total for k, v in probs.items()}
+    """Return probability distribution over emotions."""
+    scores = {}
+    for emotion, rules in EMOTION_RULES.items():
+        score = 0.0
+        for au, weight in rules.items():
+            score += aus.get(au, 0.0) * weight
+        scores[emotion] = score
+    total = sum(scores.values()) or 1.0
+    return {e: s / total for e, s in scores.items()}
+
+
+def emotion_confidence_interval(aus: Dict[str, float], samples: int = 10) -> Dict[str, tuple]:
+    """
+    Estimate confidence intervals for emotion probabilities using bootstrap.
+    
+    Args:
+        aus: Action unit values
+        samples: Number of bootstrap samples
+        
+    Returns:
+        Dict mapping emotions to (lower_bound, upper_bound) tuples
+    """
+    probs_list = []
+    for _ in range(samples):
+        # Add small noise to simulate measurement uncertainty
+        noisy_aus = {k: max(0, min(1, v + np.random.normal(0, 0.05))) 
+                     for k, v in aus.items()}
+        probs = emotion_probabilities(noisy_aus)
+        probs_list.append(probs)
+    
+    # Calculate confidence intervals
+    intervals = {}
+    for emotion in EMOTION_RULES.keys():
+        emotion_probs = [p[emotion] for p in probs_list]
+        lower = np.percentile(emotion_probs, 5)  # 5th percentile
+        upper = np.percentile(emotion_probs, 95)  # 95th percentile
+        intervals[emotion] = (float(lower), float(upper))
+    
+    return intervals
