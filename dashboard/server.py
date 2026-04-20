@@ -223,6 +223,7 @@ async def index(request: Request):
         "request": request,
         "llm_enabled": settings.enable_llm_reasoning,
         "llm_provider": settings.llm_provider,
+        "cdn_url": settings.cdn_url,
     })
 
 

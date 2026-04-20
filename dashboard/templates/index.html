@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Facial HCI Agent</title>
-<link rel="stylesheet" href="/static/css/style.css" />
+<link rel="stylesheet" href="{% if cdn_url %}{{ cdn_url }}/static/css/style.css{% else %}/static/css/style.css{% endif %}" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -97,6 +97,6 @@
   </section>
 </main>
 
-<script src="/static/js/app.js"></script>
+<script src="{% if cdn_url %}{{ cdn_url }}/static/js/app.js{% else %}/static/js/app.js{% endif %}"></script>
 </body>
 </html>

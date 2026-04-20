@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
     enable_redis: bool = Field(default=False, alias="ENABLE_REDIS")
+    cdn_url: str = Field(default="", alias="CDN_URL")
 
     project_root: Path = Path(__file__).resolve().parents[2]
     model_dir: Path = Path(__file__).resolve().parents[2] / "models"
